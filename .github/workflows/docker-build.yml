@@ -57,7 +57,8 @@ jobs:
       - id: image-name
         run: |
           NAME="${{ inputs.image_name }}"
-          echo "image=${NAME:-ghcr.io/${{ github.repository }}}" >> "$GITHUB_OUTPUT"
+          REPO="$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          echo "image=${NAME:-ghcr.io/${REPO}}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/metadata-action@v5
         id: meta
