@@ -1,0 +1,67 @@
+name: Rust CI
+
+on:
+  workflow_call:
+    inputs:
+      toolchain:
+        description: "Rust toolchain version"
+        type: string
+        default: "stable"
+      cargo_test_args:
+        description: "Extra args for cargo test"
+        type: string
+        default: "--all"
+      cargo_clippy_args:
+        description: "Extra args for cargo clippy"
+        type: string
+        default: "--all-targets -- -D warnings"
+      runner_labels:
+        description: "Runner labels (JSON array)"
+        type: string
+        default: '["self-hosted", "linux", "x64", "liwei"]'
+      skip_test:
+        description: "Skip test step"
+        type: boolean
+        default: false
+
+concurrency:
+  group: rust-ci-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: Formatting
+    runs-on: ${{ fromJSON(inputs.runner_labels) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.toolchain }}
+          components: rustfmt
+      - run: cargo fmt --all -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ${{ fromJSON(inputs.runner_labels) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.toolchain }}
+          components: clippy
+      - run: cargo clippy ${{ inputs.cargo_clippy_args }}
+
+  build:
+    name: Build & Test
+    runs-on: ${{ fromJSON(inputs.runner_labels) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.toolchain }}
+      - run: cargo build --all
+      - if: ${{ !inputs.skip_test }}
+        run: cargo test ${{ inputs.cargo_test_args }}
