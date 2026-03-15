@@ -7,6 +7,14 @@ on:
         description: "Rust toolchain version"
         type: string
         default: "stable"
+      apt_packages:
+        description: "Space-separated list of apt packages to install before build"
+        type: string
+        default: ""
+      cargo_build_args:
+        description: "Extra args for cargo build"
+        type: string
+        default: "--all"
       cargo_test_args:
         description: "Extra args for cargo test"
         type: string
@@ -23,6 +31,10 @@ on:
         description: "Skip test step"
         type: boolean
         default: false
+      skip_fmt:
+        description: "Skip fmt step"
+        type: boolean
+        default: false
 
 concurrency:
   group: rust-ci-${{ github.repository }}-${{ github.ref }}
@@ -34,6 +46,7 @@ env:
 jobs:
   fmt:
     name: Formatting
+    if: ${{ !inputs.skip_fmt }}
     runs-on: ${{ fromJSON(inputs.runner_labels) }}
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +61,11 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runner_labels) }}
     steps:
       - uses: actions/checkout@v4
+      - name: Install system dependencies
+        if: inputs.apt_packages != ''
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ${{ inputs.apt_packages }}
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ inputs.toolchain }}
@@ -59,9 +77,14 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runner_labels) }}
     steps:
       - uses: actions/checkout@v4
+      - name: Install system dependencies
+        if: inputs.apt_packages != ''
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ${{ inputs.apt_packages }}
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ inputs.toolchain }}
-      - run: cargo build --all
+      - run: cargo build ${{ inputs.cargo_build_args }}
       - if: ${{ !inputs.skip_test }}
         run: cargo test ${{ inputs.cargo_test_args }}
